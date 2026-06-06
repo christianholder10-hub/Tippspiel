@@ -207,8 +207,9 @@ export default function SpieltagScreen() {
 
 // ─── GameCard ─────────────────────────────────────────────────────────────────
 function GameCard({ game, tip, state, displayDate, onPress }) {
-  const isLocked  = state === 'locked' || state === 'locked_no_tip' || state === 'locked_saved';
   const hasResult = state === 'correct' || state === 'wrong';
+  // Alle Spiele, die nicht mehr aktiv tippbar sind, gelten als gesperrt
+  const isLocked  = state !== 'empty' && state !== 'saved';
 
   const cardStyle = [
     s.card,
@@ -323,13 +324,13 @@ function TeamButton({ side, game, tip, state, onPress }) {
 function ResultBadge({ state, tip, game }) {
   const correct = state === 'correct';
   return (
-    <View style={[s.resultBadge, correct ? s.resultBadgeCorrect : s.resultBadgeWrong]}>
+    <View style={s.resultBadge}>
       <Ionicons
         name={correct ? 'checkmark-circle' : 'close-circle'}
         size={14}
-        color={correct ? C.correct : C.wrong}
+        color={C.lockedText}
       />
-      <Text style={[s.resultText, correct ? s.resultTextCorrect : s.resultTextWrong]}>
+      <Text style={s.resultText}>
         {correct
           ? `Richtig! +${(tip === 'A' ? game.oddsA : game.oddsB).toFixed(1)} Punkte`
           : `Falsch — ${game.result === 'A' ? game.teamA : game.teamB} hat gewonnen`
@@ -447,17 +448,13 @@ const s = StyleSheet.create({
   oddsWrong:        { color: C.wrong },
   oddsLocked:       { color: C.lockedText },
 
-  // ── Result badge ──
+  // ── Result badge — einheitliche gedimmte Grünfarbe wie Datum/Uhrzeit ──
   resultBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     marginTop: 10, paddingVertical: 6, paddingHorizontal: 10,
-    borderRadius: 8,
+    borderRadius: 8, backgroundColor: C.lockedBtn,
   },
-  resultBadgeCorrect:  { backgroundColor: C.correctBg },
-  resultBadgeWrong:    { backgroundColor: C.wrongBg },
-  resultText:          { fontSize: 12, fontWeight: '600' },
-  resultTextCorrect:   { color: C.correct },
-  resultTextWrong:     { color: C.wrong },
+  resultText: { color: C.lockedText, fontSize: 12, fontWeight: '600' },
 
   // ── Modal ──
   modalOverlay: {
