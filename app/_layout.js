@@ -3,31 +3,31 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
 const TABS = [
-  { name: 'index',        label: 'Spieltag',    icon: 'football-outline' },
-  { name: 'tabelle',      label: 'Tabelle',     icon: 'trophy-outline' },
-  { name: 'turnierbaum',  label: 'Turnierbaum', icon: 'git-branch-outline' },
-  { name: 'profil',       label: 'Profil',      icon: 'person-outline' },
+  { name: 'index',       label: 'Spieltag',    icon: 'football-outline' },
+  { name: 'tabelle',     label: 'Tabelle',      icon: 'trophy-outline' },
+  { name: 'turnierbaum', label: 'Turnierbaum',  icon: 'git-branch-outline' },
+  { name: 'profil',      label: 'Profil',       icon: 'person-outline' },
 ];
 
 export default function RootLayout() {
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Tabs
         screenOptions={{
-          headerStyle: { backgroundColor: '#0B0F1A', shadowColor: 'transparent', elevation: 0 },
-          headerTintColor: '#F8FAFC',
-          headerTitleStyle: { fontWeight: '700', fontSize: 18, letterSpacing: 0.3 },
+          headerStyle: { backgroundColor: '#FFFFFF', shadowColor: '#D1FAE5', elevation: 2 },
+          headerTintColor: '#14532D',
+          headerTitleStyle: { fontWeight: '700', fontSize: 18 },
           tabBarStyle: {
-            backgroundColor: '#0B0F1A',
-            borderTopColor: '#1A2540',
+            backgroundColor: '#FFFFFF',
+            borderTopColor: '#D1FAE5',
             borderTopWidth: 1,
             height: 68,
             paddingBottom: 10,
             paddingTop: 8,
           },
-          tabBarActiveTintColor: '#22C55E',
-          tabBarInactiveTintColor: '#3F5070',
+          tabBarActiveTintColor: '#15803D',
+          tabBarInactiveTintColor: '#9CA3AF',
           tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 2 },
         }}
       >

@@ -1,12 +1,13 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { MATCHDAYS } from '../data/matchdays';
 
 const C = {
-  bg: '#0B0F1A', card: '#141C2E', green: '#22C55E',
-  text: '#F8FAFC', textSec: '#94A3B8', textMuted: '#3F5070', border: '#1A2540',
+  bg: '#F0FDF4', card: '#FFFFFF',
+  green900: '#14532D', green700: '#15803D', green500: '#22C55E', green200: '#BBF7D0', green100: '#DCFCE7',
+  text: '#0F172A', textSec: '#374151', textMuted: '#6B7280',
+  border: '#D1FAE5', borderCard: '#E5E7EB',
 };
-
-const ROUNDS = ['Gruppenphase', 'Achtelfinale', 'Viertelfinale', 'Halbfinale', 'Finale'];
 
 export default function TurnierbaumScreen() {
   return (
@@ -14,32 +15,33 @@ export default function TurnierbaumScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
         <View style={s.placeholder}>
-          <Ionicons name="git-branch-outline" size={52} color={C.textMuted} />
+          <Ionicons name="git-branch-outline" size={48} color={C.green500} />
           <Text style={s.placeholderTitle}>Turnierbaum</Text>
           <Text style={s.placeholderSub}>
             Wird nach Abschluss der Gruppenphase freigeschaltet.
           </Text>
         </View>
 
-        {ROUNDS.map((round, i) => (
-          <View key={round} style={s.roundCard}>
+        {MATCHDAYS.map((md, i) => (
+          <View key={md.id} style={s.roundCard}>
             <View style={s.roundHeader}>
               <View style={[s.roundDot, i === 0 && s.roundDotActive]} />
-              <Text style={[s.roundLabel, i === 0 && s.roundLabelActive]}>{round}</Text>
-              {i === 0 && <View style={s.liveBadge}><Text style={s.liveText}>LÄUFT</Text></View>}
-            </View>
-            <View style={s.slots}>
-              {Array.from({ length: Math.max(1, 8 >> i) }, (_, j) => (
-                <View key={j} style={s.slot}>
-                  <Text style={s.slotText}>—</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.roundLabel, i === 0 && s.roundLabelActive]}>{md.label}</Text>
+                <Text style={s.roundDate}>{md.dateRange}</Text>
+              </View>
+              {i === 0 && (
+                <View style={s.activeBadge}>
+                  <Text style={s.activeBadgeText}>AKTUELL</Text>
                 </View>
-              ))}
+              )}
+              <Text style={s.gameCount}>{md.games.length} Spiele</Text>
             </View>
           </View>
         ))}
 
         <Text style={s.hint}>
-          * Turnierbaum wird automatisch befüllt, sobald die Ergebnisse feststehen.
+          Der Turnierbaum wird automatisch befüllt, sobald die Ergebnisse feststehen.
         </Text>
       </ScrollView>
     </View>
@@ -47,38 +49,37 @@ export default function TurnierbaumScreen() {
 }
 
 const s = StyleSheet.create({
-  container:          { flex: 1, backgroundColor: C.bg },
-  scroll:             { padding: 16, gap: 12, paddingBottom: 40 },
+  container:        { flex: 1, backgroundColor: C.bg },
+  scroll:           { padding: 16, gap: 10, paddingBottom: 40 },
 
   placeholder: {
-    backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border,
-    padding: 36, alignItems: 'center', gap: 12, marginBottom: 4,
+    backgroundColor: C.card, borderRadius: 16,
+    borderWidth: 1, borderColor: C.border,
+    padding: 32, alignItems: 'center', gap: 10, marginBottom: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
-  placeholderTitle:   { color: C.text, fontSize: 20, fontWeight: '700' },
-  placeholderSub:     { color: C.textSec, fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  placeholderTitle: { color: C.green900, fontSize: 20, fontWeight: '700' },
+  placeholderSub:   { color: C.textSec, fontSize: 14, textAlign: 'center', lineHeight: 20 },
 
   roundCard: {
     backgroundColor: C.card, borderRadius: 12, borderWidth: 1,
-    borderColor: C.border, padding: 14,
+    borderColor: C.borderCard, padding: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03, shadowRadius: 3, elevation: 1,
   },
-  roundHeader:        { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  roundDot:           { width: 8, height: 8, borderRadius: 4, backgroundColor: C.textMuted },
-  roundDotActive:     { backgroundColor: C.green },
-  roundLabel:         { color: C.textSec, fontSize: 14, fontWeight: '600', flex: 1 },
-  roundLabelActive:   { color: C.text },
-  liveBadge: {
-    backgroundColor: '#052E16', borderRadius: 6, borderWidth: 1,
-    borderColor: '#16A34A', paddingVertical: 2, paddingHorizontal: 8,
+  roundHeader:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  roundDot:         { width: 8, height: 8, borderRadius: 4, backgroundColor: C.borderCard, marginTop: 2, flexShrink: 0 },
+  roundDotActive:   { backgroundColor: C.green500 },
+  roundLabel:       { color: C.textSec, fontSize: 14, fontWeight: '600' },
+  roundLabelActive: { color: C.green900 },
+  roundDate:        { color: C.textMuted, fontSize: 12, marginTop: 2 },
+  activeBadge: {
+    backgroundColor: C.green100, borderRadius: 6, borderWidth: 1,
+    borderColor: C.green200, paddingVertical: 2, paddingHorizontal: 8,
   },
-  liveText:           { color: C.green, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  activeBadgeText:  { color: C.green700, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  gameCount:        { color: C.textMuted, fontSize: 12, fontWeight: '600' },
 
-  slots:              { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  slot: {
-    backgroundColor: '#0F1623', borderRadius: 8, borderWidth: 1,
-    borderColor: C.border, paddingVertical: 6, paddingHorizontal: 10,
-    minWidth: 60, alignItems: 'center',
-  },
-  slotText:           { color: C.textMuted, fontSize: 12, fontWeight: '600' },
-
-  hint:               { color: C.textMuted, fontSize: 11, textAlign: 'center', lineHeight: 16 },
+  hint:             { color: C.textMuted, fontSize: 11, textAlign: 'center', lineHeight: 16, marginTop: 4 },
 });
