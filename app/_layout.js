@@ -23,13 +23,13 @@ export default function RootLayout() {
             backgroundColor: '#0F3D1A',
             borderTopColor: '#1A5C2A',
             borderTopWidth: 1,
-            height: 68,
-            paddingBottom: 10,
+            height: 82,
+            paddingBottom: 18,
             paddingTop: 8,
           },
           tabBarActiveTintColor: '#4ADE80',
           tabBarInactiveTintColor: '#4D8060',
-          tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 2 },
+          tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 0 },
         }}
       >
         {TABS.map(({ name, label, icon }) => (

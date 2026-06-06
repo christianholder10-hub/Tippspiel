@@ -85,6 +85,11 @@ export default function TurnierbaumScreen() {
                               <Ionicons name="time-outline" size={11} color={C.textMuted} />
                               <Text style={s.unknownText}>Noch nicht bekannt</Text>
                             </View>
+                          ) : game.score ? (
+                            <View style={s.scoreBox}>
+                              <Text style={s.scoreText}>{game.score.home} : {game.score.away}</Text>
+                              <Text style={s.gameTimeSub}>{disp} · {game.time}</Text>
+                            </View>
                           ) : (
                             <Text style={s.gameTime}>{disp} · {game.time}</Text>
                           )}
@@ -148,6 +153,9 @@ const s = StyleSheet.create({
   gameVs:         { color: C.textMuted, fontSize: 11, fontWeight: '700' },
   gameMeta:       { alignItems: 'flex-end', marginLeft: 8 },
   gameTime:       { color: C.textSec, fontSize: 12, fontWeight: '600' },
+  scoreBox:       { alignItems: 'flex-end', gap: 1 },
+  scoreText:      { color: C.text, fontSize: 13, fontWeight: '800' },
+  gameTimeSub:    { color: C.textMuted, fontSize: 10 },
   unknownBadge:   { flexDirection: 'row', alignItems: 'center', gap: 3 },
   unknownText:    { color: C.textMuted, fontSize: 11, fontStyle: 'italic' },
 

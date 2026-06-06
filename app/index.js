@@ -11,10 +11,9 @@ import { useTips } from '../context/TipsContext';
 // ─── Design-System ────────────────────────────────────────────────────────────
 const C = {
   bg:           '#1B5E2E',
-  card:         '#F0FDF4',   // light green statt weiß
+  card:         '#F0FDF4',
   onPitch:      '#F0FDF4',
   onPitchSec:   '#86EFAC',
-  pitch:        '#0F3D1A',
   accent:       '#4ADE80',
   green900:     '#14532D',
   green700:     '#15803D',
@@ -24,29 +23,26 @@ const C = {
   textMuted:    '#6B7280',
   border:       '#D1FAE5',
 
-  // Tipp-Zustand 1: gespeichert, kein Ergebnis → blau
+  // Alle vergangenen/gesperrten Karten: einheitliches gedimmtes Grün
+  lockedCard:   '#DDE8DF',
+  lockedBtn:    '#CDD8CF',
+  lockedText:   '#7A9880',
+  lockedBorder: '#B8CEBC',
+
+  // Tipp gespeichert (noch kein Ergebnis) → blau
   saved:        '#1D4ED8',
   savedBg:      '#EFF6FF',
   savedBorder:  '#3B82F6',
 
-  // Tipp-Zustand 2: Ergebnis richtig → grün (dunkleres Grün als Hintergrund)
+  // Ergebnis richtig → selbe Grüntöne wie Legende
   correct:      '#14532D',
   correctBg:    '#DCFCE7',
   correctBorder:'#16A34A',
 
-  // Tipp-Zustand 3: Ergebnis falsch → rot
+  // Ergebnis falsch → selbe Rottöne wie Legende
   wrong:        '#991B1B',
-  wrongBg:      '#FEE2E2',
-  wrongBorder:  '#EF4444',
-
-  // Gewinner-Highlight (wenn Tipp falsch war, zeige wer gewonnen hat)
-  winnerBg:     '#DCFCE7',
-  winnerBorder: '#16A34A',
-
-  // Gesperrt (keine Interaktion)
-  lockedCard:   '#E2E8E4',
-  lockedText:   '#9CA3AF',
-  lockedBorder: '#CBD5E1',
+  wrongBg:      '#FCE8E8',
+  wrongBorder:  '#B91C1C',
 };
 
 // ─── Hilfsfunktion: Spielkarten-Zustand ──────────────────────────────────────
@@ -228,10 +224,10 @@ function GameCard({ game, tip, state, displayDate, onPress }) {
         <Text style={[s.topDate, isLocked && s.topDateLocked]}>
           {displayDate}
         </Text>
-        <ScoreBadge game={game} state={state} />
+        <ScoreBadge game={game} />
         <View style={s.topRight}>
           <Text style={[s.topTime, isLocked && s.topTimeLocked]}>{game.time} Uhr</Text>
-          {isLocked && !hasResult && (
+          {isLocked && (
             <View style={s.lockRow}>
               <Ionicons name="lock-closed" size={10} color={C.lockedText} />
               <Text style={s.lockText}>Gesperrt</Text>
@@ -255,25 +251,12 @@ function GameCard({ game, tip, state, displayDate, onPress }) {
 }
 
 // ─── ScoreBadge ───────────────────────────────────────────────────────────────
-function ScoreBadge({ game, state }) {
+function ScoreBadge({ game }) {
   const hasScore = game.score != null;
-  const isCorrect = state === 'correct';
-  const isWrong   = state === 'wrong';
-
   return (
-    <View style={[
-      s.scoreBadge,
-      isCorrect && s.scoreBadgeCorrect,
-      isWrong   && s.scoreBadgeWrong,
-    ]}>
+    <View style={s.scoreBadge}>
       {hasScore ? (
-        <Text style={[
-          s.scoreText,
-          isCorrect && s.scoreTextCorrect,
-          isWrong   && s.scoreTextWrong,
-        ]}>
-          {game.score.home} : {game.score.away}
-        </Text>
+        <Text style={s.scoreText}>{game.score.home} : {game.score.away}</Text>
       ) : (
         <Text style={s.scorePlaceholder}>– : –</Text>
       )}
@@ -282,49 +265,43 @@ function ScoreBadge({ game, state }) {
 }
 
 // ─── TeamButton ───────────────────────────────────────────────────────────────
+// Regel: Nur der vom Spieler gewählte Button bekommt Farbe.
+// Alle anderen Buttons bleiben im neutralen "gesperrt"-Stil.
 function TeamButton({ side, game, tip, state, onPress }) {
-  const isMyPick   = tip === side;
-  const isWinner   = game.result === side;
-  const hasResult  = state === 'correct' || state === 'wrong';
-  const isLocked   = state !== 'empty' && state !== 'saved';
+  const isMyPick  = tip === side;
+  const hasResult = state === 'correct' || state === 'wrong';
+  const isLocked  = state !== 'empty' && state !== 'saved';
 
   let btnStyle  = [s.teamBtn];
   let nameStyle = [s.teamName];
   let oddsStyle = [s.oddsText];
   let icon      = null;
 
-  if (hasResult) {
-    if (isMyPick && state === 'correct') {
+  if (hasResult && isMyPick) {
+    if (state === 'correct') {
       btnStyle  = [s.teamBtn, s.teamBtnCorrect];
       nameStyle = [s.teamName, s.teamNameCorrect];
       oddsStyle = [s.oddsText, s.oddsCorrect];
       icon      = <Ionicons name="checkmark-circle" size={13} color={C.correct} style={s.btnIcon} />;
-    } else if (isMyPick && state === 'wrong') {
+    } else {
       btnStyle  = [s.teamBtn, s.teamBtnWrong];
       nameStyle = [s.teamName, s.teamNameWrong];
       oddsStyle = [s.oddsText, s.oddsWrong];
       icon      = <Ionicons name="close-circle" size={13} color={C.wrong} style={s.btnIcon} />;
-    } else if (!isMyPick && isWinner) {
-      // Zeige den tatsächlichen Gewinner wenn Tipp falsch war
-      btnStyle  = [s.teamBtn, s.teamBtnWinner];
-      nameStyle = [s.teamName, s.teamNameCorrect];
-    } else {
-      btnStyle  = [s.teamBtn, s.teamBtnDimmed];
-      nameStyle = [s.teamName, s.teamNameDimmed];
     }
-  } else if (state === 'saved' || state === 'locked_saved') {
-    if (isMyPick) {
-      btnStyle  = [s.teamBtn, s.teamBtnSaved];
-      nameStyle = [s.teamName, s.teamNameSaved];
-      oddsStyle = [s.oddsText, s.oddsSaved];
-      icon      = <Ionicons name="bookmark" size={12} color={C.saved} style={s.btnIcon} />;
-    } else {
-      btnStyle  = [s.teamBtn, s.teamBtnDimmed];
-      nameStyle = [s.teamName, s.teamNameDimmed];
-    }
-  } else if (state === 'locked' || state === 'locked_no_tip') {
-    btnStyle  = [s.teamBtn, s.teamBtnLockedEmpty];
-    nameStyle = [s.teamName, s.teamNameDimmed];
+  } else if (isLocked) {
+    // Alle nicht-gewählten Buttons + gesperrte ohne Tipp: neutrales gedimmtes Grün
+    btnStyle  = [s.teamBtn, s.teamBtnLocked];
+    nameStyle = [s.teamName, s.teamNameLocked];
+    oddsStyle = [s.oddsText, s.oddsLocked];
+  } else if (state === 'saved' && isMyPick) {
+    btnStyle  = [s.teamBtn, s.teamBtnSaved];
+    nameStyle = [s.teamName, s.teamNameSaved];
+    oddsStyle = [s.oddsText, s.oddsSaved];
+    icon      = <Ionicons name="bookmark" size={12} color={C.saved} style={s.btnIcon} />;
+  } else if (state === 'saved' && !isMyPick) {
+    btnStyle  = [s.teamBtn, s.teamBtnDimmed];
+    nameStyle = [s.teamName, s.teamNameLocked];
   }
 
   return (
@@ -412,9 +389,10 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08, shadowRadius: 6, elevation: 3,
   },
-  cardCorrect:     { backgroundColor: '#F0FDF4', borderColor: C.correctBorder },
-  cardWrong:       { backgroundColor: '#FFF5F5', borderColor: C.wrongBorder },
-  cardLocked:      { backgroundColor: '#EDF2EE', borderColor: C.lockedBorder, opacity: 0.85 },
+  // Alle abgeschlossenen Spiele: einheitliches gedimmtes Grün
+  cardLocked:  { backgroundColor: C.lockedCard, borderColor: C.lockedBorder },
+  cardCorrect: { backgroundColor: C.lockedCard, borderColor: C.lockedBorder },
+  cardWrong:   { backgroundColor: C.lockedCard, borderColor: C.lockedBorder },
 
   // ── Card top row ──
   cardTop:         { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
@@ -426,17 +404,13 @@ const s = StyleSheet.create({
   lockRow:         { flexDirection: 'row', alignItems: 'center', gap: 3 },
   lockText:        { color: C.lockedText, fontSize: 10, fontWeight: '600' },
 
-  // ── Score badge ──
+  // ── Score badge ── neutral für alle Spielkarten
   scoreBadge: {
-    backgroundColor: '#E2E8E4', borderRadius: 8,
+    backgroundColor: C.lockedBtn, borderRadius: 8,
     paddingVertical: 4, paddingHorizontal: 12, minWidth: 64, alignItems: 'center',
   },
-  scoreBadgeCorrect: { backgroundColor: C.correctBg },
-  scoreBadgeWrong:   { backgroundColor: C.wrongBg },
-  scoreText:         { color: C.text, fontSize: 15, fontWeight: '800' },
-  scoreTextCorrect:  { color: C.correct },
-  scoreTextWrong:    { color: C.wrong },
-  scorePlaceholder:  { color: C.lockedText, fontSize: 14, fontWeight: '700' },
+  scoreText:        { color: C.text, fontSize: 15, fontWeight: '800' },
+  scorePlaceholder: { color: C.lockedText, fontSize: 14, fontWeight: '700' },
 
   // ── Teams row ──
   teamsRow:          { flexDirection: 'row', gap: 8 },
@@ -448,26 +422,30 @@ const s = StyleSheet.create({
     paddingVertical: 12, paddingHorizontal: 8,
     alignItems: 'center', gap: 5, minHeight: 66, justifyContent: 'center',
   },
-  teamBtnSaved:        { borderColor: C.savedBorder,   backgroundColor: C.savedBg },
-  teamBtnCorrect:      { borderColor: C.correctBorder,  backgroundColor: C.correctBg },
-  teamBtnWrong:        { borderColor: C.wrongBorder,    backgroundColor: C.wrongBg },
-  teamBtnWinner:       { borderColor: C.correctBorder,  backgroundColor: C.winnerBg },
-  teamBtnDimmed:       { opacity: 0.4 },
-  teamBtnLockedEmpty:  { borderColor: C.lockedBorder, backgroundColor: '#E2E8E4' },
+  // Gesperrt (kein Tipp / nicht gewählt): gedimmtes einheitliches Grün
+  teamBtnLocked:   { borderColor: C.lockedBorder, backgroundColor: C.lockedBtn },
+  teamBtnDimmed:   { borderColor: C.lockedBorder, backgroundColor: C.lockedBtn },
+  // Tipp gespeichert → blau
+  teamBtnSaved:    { borderColor: C.savedBorder,  backgroundColor: C.savedBg },
+  // Ergebnis richtig → grün (wie Legende)
+  teamBtnCorrect:  { borderColor: C.correctBorder, backgroundColor: C.correctBg },
+  // Ergebnis falsch → rot (wie Legende)
+  teamBtnWrong:    { borderColor: C.wrongBorder,   backgroundColor: C.wrongBg },
 
-  btnIcon:             { position: 'absolute', top: 5, right: 5 },
+  btnIcon:          { position: 'absolute', top: 5, right: 5 },
 
-  teamName:            { color: C.text,    fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  teamNameSaved:       { color: C.saved },
-  teamNameCorrect:     { color: C.correct },
-  teamNameWrong:       { color: C.wrong },
-  teamNameDimmed:      { color: C.lockedText },
+  teamName:         { color: C.text,       fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  teamNameSaved:    { color: C.saved },
+  teamNameCorrect:  { color: C.correct },
+  teamNameWrong:    { color: C.wrong },
+  teamNameLocked:   { color: C.lockedText },
 
-  oddsBadge:           { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 5, backgroundColor: 'rgba(0,0,0,0.05)' },
-  oddsText:            { color: C.textMuted, fontSize: 11, fontWeight: '700' },
-  oddsSaved:           { color: C.saved },
-  oddsCorrect:         { color: C.correct },
-  oddsWrong:           { color: C.wrong },
+  oddsBadge:        { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 5, backgroundColor: 'rgba(0,0,0,0.06)' },
+  oddsText:         { color: C.textMuted, fontSize: 11, fontWeight: '700' },
+  oddsSaved:        { color: C.saved },
+  oddsCorrect:      { color: C.correct },
+  oddsWrong:        { color: C.wrong },
+  oddsLocked:       { color: C.lockedText },
 
   // ── Result badge ──
   resultBadge: {
