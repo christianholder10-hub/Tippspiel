@@ -1,6 +1,12 @@
 // Reale WM 2026 Daten — Quelle: sportschau.de
 // oddsA / oddsB = Platzhalter 2.0 — wird später durch Wettbüro-API ersetzt
 
+export function isPlaceholderGame(game) {
+  return game.teamA.startsWith('Gruppe') ||
+         game.teamA.startsWith('Sieger') ||
+         game.teamA.startsWith('2. Platz');
+}
+
 export function isGameLocked(dateISO, time) {
   return new Date() >= new Date(`${dateISO}T${time}:00`);
 }

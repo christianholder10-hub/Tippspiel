@@ -1,40 +1,46 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { PLAYERS } from '../data/players';
+import { useTips } from '../context/TipsContext';
 import { MATCHDAYS } from '../data/matchdays';
 
 const C = {
-  bg: '#F0FDF4', surface: '#FFFFFF', card: '#FFFFFF',
-  green900: '#14532D', green700: '#15803D', green500: '#22C55E', green200: '#BBF7D0', green100: '#DCFCE7',
+  bg: '#1B5E2E', card: '#FFFFFF',
+  green900: '#14532D', green700: '#15803D', green500: '#22C55E',
+  green200: '#BBF7D0', green100: '#DCFCE7',
+  onPitch: '#F0FDF4', onPitchSec: '#86EFAC',
   text: '#0F172A', textSec: '#374151', textMuted: '#6B7280',
-  border: '#D1FAE5', borderCard: '#E5E7EB',
+  border: '#E5E7EB',
+  pending: '#92400E', pendingBg: '#FEF3C7',
 };
 
-const me     = PLAYERS.find(p => p.isMe);
-const sorted = [...PLAYERS].sort((a, b) => b.points - a.points);
-const myRank = sorted.findIndex(p => p.isMe) + 1;
-
-const STATS = [
-  { icon: 'trophy-outline',           label: 'Punkte',       value: String(me.points),                                        color: C.green700 },
-  { icon: 'checkmark-circle-outline', label: 'Richtig',      value: String(me.correct),                                       color: '#2563EB' },
-  { icon: 'podium-outline',           label: 'Rang',         value: `#${myRank}`,                                             color: '#D97706' },
-  { icon: 'analytics-outline',        label: 'Trefferquote', value: `${Math.round((me.correct / me.total) * 100)} %`,         color: '#7C3AED' },
-];
-
-// Letzte 3 Spieltage als Platzhalter-Verlauf
-const HISTORY = [
-  { dayIndex: 0, correct: 14, total: 24, points: 28 },
-  { dayIndex: 1, correct: 11, total: 24, points: 22 },
-  { dayIndex: 2, correct: 16, total: 24, points: 32 },
-];
+const ME_NAME = 'Du';
 
 export default function ProfilScreen() {
-  const router = useRouter();
+  const router      = useRouter();
+  const { tips }    = useTips();
 
-  const goToMatchday = (dayIndex) => {
-    router.push({ pathname: '/', params: { day: String(dayIndex) } });
-  };
+  // Echte Metriken aus den gespeicherten Tipps
+  const totalTipped = Object.values(tips).reduce(
+    (sum, day) => sum + Object.keys(day).length, 0
+  );
+  const completedDays = MATCHDAYS.filter((md, i) =>
+    Object.keys(tips[i] || {}).length === md.games.length
+  ).length;
+
+  // Spieltage wo mindestens 1 Tipp gesetzt wurde (für Verlauf)
+  const tippedHistory = MATCHDAYS
+    .map((md, i) => ({ md, i, count: Object.keys(tips[i] || {}).length }))
+    .filter(({ count }) => count > 0)
+    .slice(-5)
+    .reverse();
+
+  const STATS = [
+    { icon: 'football-outline',         label: 'Tipps gesetzt',    value: String(totalTipped),      color: C.green700 },
+    { icon: 'checkmark-done-outline',   label: 'Spieltage fertig', value: String(completedDays),    color: '#2563EB' },
+    { icon: 'trophy-outline',           label: 'Punkte',           value: '—',                      color: '#D97706', pending: true },
+    { icon: 'analytics-outline',        label: 'Trefferquote',     value: '—',                      color: '#7C3AED', pending: true },
+  ];
 
   return (
     <View style={s.container}>
@@ -43,56 +49,69 @@ export default function ProfilScreen() {
         {/* Avatar */}
         <View style={s.avatarRow}>
           <View style={s.avatar}>
-            <Text style={s.avatarInitial}>{me.name.charAt(0)}</Text>
+            <Text style={s.avatarInitial}>{ME_NAME.charAt(0)}</Text>
           </View>
-          <Text style={s.name}>{me.name}</Text>
+          <Text style={s.name}>{ME_NAME}</Text>
           <Text style={s.sub}>WM 2026 · Tippspiel</Text>
+        </View>
+
+        {/* Info: Punkte erst nach Spielergebnissen */}
+        <View style={s.pendingBox}>
+          <Ionicons name="time-outline" size={15} color={C.pending} />
+          <Text style={s.pendingText}>
+            Punkte und Trefferquote werden nach Spielende auf Basis der tatsächlichen Ergebnisse berechnet.
+          </Text>
         </View>
 
         {/* Stats Grid */}
         <View style={s.grid}>
           {STATS.map((stat) => (
             <View key={stat.label} style={s.statCard}>
-              <Ionicons name={stat.icon} size={22} color={stat.color} />
-              <Text style={[s.statValue, { color: stat.color }]}>{stat.value}</Text>
+              <Ionicons name={stat.icon} size={20} color={stat.pending ? C.textMuted : stat.color} />
+              <Text style={[s.statValue, { color: stat.pending ? C.textMuted : stat.color }]}>
+                {stat.value}
+              </Text>
               <Text style={s.statLabel}>{stat.label}</Text>
+              {stat.pending && <Text style={s.statPending}>ausstehend</Text>}
             </View>
           ))}
         </View>
 
-        <Text style={s.sectionLabel}>LETZTE SPIELTAGE</Text>
-
-        {HISTORY.map((entry) => {
-          const md = MATCHDAYS[entry.dayIndex];
-          return (
-            <TouchableOpacity
-              key={entry.dayIndex}
-              style={s.historyRow}
-              onPress={() => goToMatchday(entry.dayIndex)}
-              activeOpacity={0.7}
-            >
-              <View style={s.historyLeft}>
-                <Text style={s.historyDay}>{md.label}</Text>
-                <Text style={s.historyDate}>{md.dateRange}</Text>
-                <View style={s.historyLink}>
-                  <Ionicons name="arrow-forward-circle-outline" size={13} color={C.green700} />
-                  <Text style={s.historyLinkText}>Zum Spielplan</Text>
+        {/* Spieltag-Verlauf */}
+        {tippedHistory.length > 0 && (
+          <>
+            <Text style={s.sectionLabel}>MEINE TIPPS</Text>
+            {tippedHistory.map(({ md, i, count }) => (
+              <TouchableOpacity
+                key={i}
+                style={s.historyRow}
+                onPress={() => router.push({ pathname: '/', params: { day: String(i) } })}
+                activeOpacity={0.7}
+              >
+                <View style={s.historyLeft}>
+                  <Text style={s.historyDay}>{md.label}</Text>
+                  <Text style={s.historyDate}>{md.dateRange}</Text>
+                  <View style={s.historyLink}>
+                    <Ionicons name="arrow-forward-circle-outline" size={13} color={C.green700} />
+                    <Text style={s.historyLinkText}>Zum Spielplan</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={s.historyRight}>
-                <Text style={s.historyPoints}>+{entry.points}</Text>
-                <Text style={s.historyCorrect}>{entry.correct}/{entry.total} richtig</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+                <View style={s.historyRight}>
+                  <Text style={s.historyCount}>{count}/{md.games.length}</Text>
+                  <Text style={s.historyCountLabel}>getippt</Text>
+                  <Text style={s.historyPoints}>— Pkt.</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
 
-        <View style={s.infoBox}>
-          <Ionicons name="information-circle-outline" size={15} color={C.textMuted} />
-          <Text style={s.infoText}>
-            Punkte werden nach Spielende automatisch gutgeschrieben. Quoten kommen später live von Wettbüros.
-          </Text>
-        </View>
+        {tippedHistory.length === 0 && (
+          <View style={s.emptyBox}>
+            <Ionicons name="football-outline" size={32} color={C.onPitchSec} />
+            <Text style={s.emptyText}>Noch keine Tipps abgegeben.{'\n'}Geh zum Spieltag-Tab und leg los!</Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -102,49 +121,53 @@ const s = StyleSheet.create({
   container:      { flex: 1, backgroundColor: C.bg },
   scroll:         { padding: 16, gap: 14, paddingBottom: 40 },
 
-  avatarRow:      { alignItems: 'center', paddingVertical: 20, gap: 8 },
+  avatarRow:      { alignItems: 'center', paddingVertical: 16, gap: 8 },
   avatar: {
-    width: 72, height: 72, borderRadius: 36,
+    width: 70, height: 70, borderRadius: 35,
     backgroundColor: C.green100, borderWidth: 2, borderColor: C.green500,
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarInitial:  { color: C.green700, fontSize: 30, fontWeight: '800' },
-  name:           { color: C.green900, fontSize: 22, fontWeight: '800' },
-  sub:            { color: C.textMuted, fontSize: 13 },
+  avatarInitial:  { color: C.green700, fontSize: 28, fontWeight: '800' },
+  name:           { color: C.onPitch, fontSize: 22, fontWeight: '800' },
+  sub:            { color: C.onPitchSec, fontSize: 13 },
+
+  pendingBox: {
+    flexDirection: 'row', gap: 8, alignItems: 'flex-start',
+    backgroundColor: C.pendingBg, borderRadius: 10, padding: 12,
+  },
+  pendingText:    { color: C.pending, fontSize: 12, lineHeight: 17, flex: 1 },
 
   grid:           { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   statCard: {
     flex: 1, minWidth: '45%', backgroundColor: C.card, borderRadius: 14,
-    borderWidth: 1, borderColor: C.borderCard,
-    padding: 16, alignItems: 'center', gap: 6,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+    borderWidth: 1, borderColor: C.border,
+    padding: 14, alignItems: 'center', gap: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
   },
   statValue:      { fontSize: 24, fontWeight: '800' },
   statLabel:      { color: C.textSec, fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  statPending:    { color: C.textMuted, fontSize: 10, fontStyle: 'italic' },
 
-  sectionLabel:   { color: C.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  sectionLabel:   { color: C.onPitchSec, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
 
   historyRow: {
-    backgroundColor: C.card, borderRadius: 12, borderWidth: 1, borderColor: C.borderCard,
+    backgroundColor: C.card, borderRadius: 12, borderWidth: 1, borderColor: C.border,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 14, paddingHorizontal: 16,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
+    shadowOpacity: 0.06, shadowRadius: 3, elevation: 2,
   },
   historyLeft:    { gap: 3 },
   historyDay:     { color: C.text, fontSize: 15, fontWeight: '700' },
   historyDate:    { color: C.textMuted, fontSize: 12 },
   historyLink:    { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   historyLinkText:{ color: C.green700, fontSize: 12, fontWeight: '600' },
-  historyRight:   { alignItems: 'flex-end', gap: 4 },
-  historyPoints:  { color: C.green700, fontSize: 20, fontWeight: '800' },
-  historyCorrect: { color: C.textSec, fontSize: 12 },
+  historyRight:   { alignItems: 'flex-end', gap: 2 },
+  historyCount:   { color: C.green700, fontSize: 20, fontWeight: '800' },
+  historyCountLabel: { color: C.textMuted, fontSize: 11 },
+  historyPoints:  { color: C.textMuted, fontSize: 12, fontStyle: 'italic' },
 
-  infoBox: {
-    flexDirection: 'row', gap: 8, alignItems: 'flex-start',
-    backgroundColor: C.surface, borderRadius: 10, padding: 12,
-    borderWidth: 1, borderColor: C.border,
-  },
-  infoText:       { color: C.textMuted, fontSize: 12, lineHeight: 17, flex: 1 },
+  emptyBox:       { alignItems: 'center', gap: 10, paddingVertical: 32 },
+  emptyText:      { color: C.onPitchSec, fontSize: 14, textAlign: 'center', lineHeight: 20 },
 });

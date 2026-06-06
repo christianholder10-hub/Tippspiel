@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { TipsProvider } from '../context/TipsContext';
 
 const TABS = [
   { name: 'index',       label: 'Spieltag',    icon: 'football-outline' },
@@ -11,23 +12,23 @@ const TABS = [
 
 export default function RootLayout() {
   return (
-    <>
-      <StatusBar style="dark" />
+    <TipsProvider>
+      <StatusBar style="light" />
       <Tabs
         screenOptions={{
-          headerStyle: { backgroundColor: '#FFFFFF', shadowColor: '#D1FAE5', elevation: 2 },
-          headerTintColor: '#14532D',
+          headerStyle: { backgroundColor: '#0F3D1A', shadowColor: 'transparent', elevation: 0 },
+          headerTintColor: '#F0FDF4',
           headerTitleStyle: { fontWeight: '700', fontSize: 18 },
           tabBarStyle: {
-            backgroundColor: '#FFFFFF',
-            borderTopColor: '#D1FAE5',
+            backgroundColor: '#0F3D1A',
+            borderTopColor: '#1A5C2A',
             borderTopWidth: 1,
             height: 68,
             paddingBottom: 10,
             paddingTop: 8,
           },
-          tabBarActiveTintColor: '#15803D',
-          tabBarInactiveTintColor: '#9CA3AF',
+          tabBarActiveTintColor: '#4ADE80',
+          tabBarInactiveTintColor: '#4D8060',
           tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 2 },
         }}
       >
@@ -44,6 +45,6 @@ export default function RootLayout() {
           />
         ))}
       </Tabs>
-    </>
+    </TipsProvider>
   );
 }
