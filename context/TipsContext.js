@@ -1,13 +1,14 @@
 import { createContext, useContext, useState } from 'react';
+import { DEMO_TIPS } from '../data/matchdays';
 
 // tips shape: { [dayIndex]: { [gameId]: 'A' | 'B' } }
-// Points are NOT stored here — they will be calculated later
-// when actual match results are provided via API.
+// Points are NOT stored here — calculated later when real results arrive via API.
+// dayIndex 0 = Testspieltag (pre-populated for demo purposes)
 
 const TipsContext = createContext(null);
 
 export function TipsProvider({ children }) {
-  const [tips, setTips] = useState({});
+  const [tips, setTips] = useState(DEMO_TIPS);
 
   const setTip = (dayIndex, gameId, team) => {
     setTips(prev => {

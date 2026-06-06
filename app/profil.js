@@ -5,12 +5,12 @@ import { useTips } from '../context/TipsContext';
 import { MATCHDAYS } from '../data/matchdays';
 
 const C = {
-  bg: '#1B5E2E', card: '#FFFFFF',
+  bg: '#1B5E2E', card: '#F0FDF4',
   green900: '#14532D', green700: '#15803D', green500: '#22C55E',
   green200: '#BBF7D0', green100: '#DCFCE7',
   onPitch: '#F0FDF4', onPitchSec: '#86EFAC',
   text: '#0F172A', textSec: '#374151', textMuted: '#6B7280',
-  border: '#E5E7EB',
+  border: '#D1FAE5',
   pending: '#92400E', pendingBg: '#FEF3C7',
 };
 

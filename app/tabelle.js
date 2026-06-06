@@ -3,11 +3,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { PLAYERS } from '../data/players';
 
 const C = {
-  bg: '#1B5E2E', card: '#FFFFFF',
+  bg: '#1B5E2E', card: '#F0FDF4',
   green900: '#14532D', green700: '#15803D', green500: '#22C55E', green200: '#BBF7D0', green100: '#DCFCE7',
   onPitch: '#F0FDF4', onPitchSec: '#86EFAC',
   gold: '#D97706', silver: '#6B7280', bronze: '#92400E',
-  text: '#0F172A', textSec: '#374151', textMuted: '#6B7280', border: '#E5E7EB',
+  text: '#0F172A', textSec: '#374151', textMuted: '#6B7280', border: '#D1FAE5',
 };
 
 const MEDAL = {

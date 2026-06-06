@@ -5,8 +5,8 @@ import { MATCHDAYS, isPlaceholderGame, formatDisplayDate } from '../data/matchda
 
 const C = {
   bg:        '#1B5E2E',
-  card:      '#FFFFFF',
-  cardInner: '#F8FFF9',
+  card:      '#F0FDF4',
+  cardInner: '#ECFDF5',
   pitch:     '#0F3D1A',
   accent:    '#4ADE80',
   accentDim: '#BBF7D0',
@@ -15,8 +15,8 @@ const C = {
   text:      '#0F172A',
   textSec:   '#374151',
   textMuted: '#6B7280',
-  border:    '#E5E7EB',
-  dim:       '#F3F4F6',
+  border:    '#D1FAE5',
+  dim:       '#ECFDF5',
 };
 
 export default function TurnierbaumScreen() {

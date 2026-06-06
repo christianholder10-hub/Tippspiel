@@ -8,30 +8,61 @@ import { useLocalSearchParams } from 'expo-router';
 import { MATCHDAYS, isGameLocked, formatDisplayDate } from '../data/matchdays';
 import { useTips } from '../context/TipsContext';
 
+// ─── Design-System ────────────────────────────────────────────────────────────
 const C = {
-  bg:             '#1B5E2E',
-  surface:        '#FFFFFF',
-  card:           '#FFFFFF',
-  selectedBg:     '#DCFCE7',
-  selectedBorder: '#16A34A',
-  lockedBg:       '#F9FAFB',
-  lockedBorder:   '#E5E7EB',
-  accent:         '#4ADE80',
-  green900:       '#14532D',
-  green700:       '#15803D',
-  green200:       '#BBF7D0',
-  onPitch:        '#F0FDF4',
-  onPitchSec:     '#86EFAC',
-  text:           '#0F172A',
-  textSec:        '#374151',
-  textMuted:      '#6B7280',
-  border:         '#E5E7EB',
+  bg:           '#1B5E2E',
+  card:         '#F0FDF4',   // light green statt weiß
+  onPitch:      '#F0FDF4',
+  onPitchSec:   '#86EFAC',
+  pitch:        '#0F3D1A',
+  accent:       '#4ADE80',
+  green900:     '#14532D',
+  green700:     '#15803D',
+  green200:     '#BBF7D0',
+  text:         '#0F172A',
+  textSec:      '#374151',
+  textMuted:    '#6B7280',
+  border:       '#D1FAE5',
+
+  // Tipp-Zustand 1: gespeichert, kein Ergebnis → blau
+  saved:        '#1D4ED8',
+  savedBg:      '#EFF6FF',
+  savedBorder:  '#3B82F6',
+
+  // Tipp-Zustand 2: Ergebnis richtig → grün (dunkleres Grün als Hintergrund)
+  correct:      '#14532D',
+  correctBg:    '#DCFCE7',
+  correctBorder:'#16A34A',
+
+  // Tipp-Zustand 3: Ergebnis falsch → rot
+  wrong:        '#991B1B',
+  wrongBg:      '#FEE2E2',
+  wrongBorder:  '#EF4444',
+
+  // Gewinner-Highlight (wenn Tipp falsch war, zeige wer gewonnen hat)
+  winnerBg:     '#DCFCE7',
+  winnerBorder: '#16A34A',
+
+  // Gesperrt (keine Interaktion)
+  lockedCard:   '#E2E8E4',
+  lockedText:   '#9CA3AF',
+  lockedBorder: '#CBD5E1',
 };
 
+// ─── Hilfsfunktion: Spielkarten-Zustand ──────────────────────────────────────
+function getGameState(game, tip, locked) {
+  if (game.result && tip) return tip === game.result ? 'correct' : 'wrong';
+  if (game.result && !tip) return 'locked_no_tip';
+  if (locked && tip) return 'locked_saved';
+  if (locked) return 'locked';
+  if (tip) return 'saved';
+  return 'empty';
+}
+
 export default function SpieltagScreen() {
-  const params               = useLocalSearchParams();
-  const { tips, setTip }     = useTips();
-  const [dayIndex, setDayIndex] = useState(0);
+  const params              = useLocalSearchParams();
+  const { tips, setTip }    = useTips();
+  const [dayIndex, setDayIndex]   = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [toastMsg, setToastMsg]   = useState('');
   const toastOpacity              = useRef(new Animated.Value(0)).current;
@@ -47,9 +78,10 @@ export default function SpieltagScreen() {
 
   const matchday = MATCHDAYS[dayIndex];
   const dayTips  = tips[dayIndex] || {};
-  const tipped   = Object.keys(dayTips).length;
-  const total    = matchday.games.length;
-  const allDone  = tipped === total;
+  const tippable = matchday.games.filter(g => !g.result && !isGameLocked(g.dateISO, g.time));
+  const tipped   = tippable.filter(g => dayTips[g.id]).length;
+  const total    = tippable.length;
+  const allDone  = total > 0 && tipped === total;
 
   const showToast = useCallback((msg) => {
     setToastMsg(msg);
@@ -61,19 +93,19 @@ export default function SpieltagScreen() {
     ]).start();
   }, [toastOpacity]);
 
-  const handleTip = useCallback((gameId, team, locked) => {
-    if (locked) return;
+  const handleTip = useCallback((gameId, team, locked, hasResult) => {
+    if (locked || hasResult) return;
     const prevDay = tips[dayIndex] || {};
     if (prevDay[gameId] === team) return;
     const newDay  = { ...prevDay, [gameId]: team };
-    const nowDone = Object.keys(newDay).length === total && Object.keys(prevDay).length < total;
+    const nowDone = tippable.every(g => newDay[g.id]);
     setTip(dayIndex, gameId, team);
-    if (nowDone) {
+    if (nowDone && !allDone) {
       setTimeout(() => setShowModal(true), 350);
     } else {
       showToast('Tipp gespeichert');
     }
-  }, [dayIndex, tips, total, setTip, showToast]);
+  }, [dayIndex, tips, tippable, allDone, setTip, showToast]);
 
   const goDay = (dir) => {
     const next = dayIndex + dir;
@@ -85,7 +117,7 @@ export default function SpieltagScreen() {
 
       {/* Toast */}
       <Animated.View style={[s.toast, { opacity: toastOpacity }]} pointerEvents="none">
-        <Ionicons name="checkmark-circle" size={15} color={C.green700} />
+        <Ionicons name="checkmark-circle" size={15} color={C.saved} />
         <Text style={s.toastText}>{toastMsg}</Text>
       </Animated.View>
 
@@ -93,8 +125,7 @@ export default function SpieltagScreen() {
       <View style={s.header}>
         <TouchableOpacity
           style={[s.navBtn, dayIndex === 0 && s.navBtnDisabled]}
-          onPress={() => goDay(-1)}
-          disabled={dayIndex === 0}
+          onPress={() => goDay(-1)} disabled={dayIndex === 0}
         >
           <Ionicons name="chevron-back" size={20} color={dayIndex === 0 ? '#4D8060' : C.onPitch} />
         </TouchableOpacity>
@@ -104,64 +135,49 @@ export default function SpieltagScreen() {
         </View>
         <TouchableOpacity
           style={[s.navBtn, dayIndex === MATCHDAYS.length - 1 && s.navBtnDisabled]}
-          onPress={() => goDay(1)}
-          disabled={dayIndex === MATCHDAYS.length - 1}
+          onPress={() => goDay(1)} disabled={dayIndex === MATCHDAYS.length - 1}
         >
           <Ionicons name="chevron-forward" size={20} color={dayIndex === MATCHDAYS.length - 1 ? '#4D8060' : C.onPitch} />
         </TouchableOpacity>
       </View>
 
-      {/* Progress */}
-      <View style={s.progressRow}>
-        <View style={s.progressBar}>
-          <View style={[s.progressFill, { width: `${(tipped / total) * 100}%` }]} />
+      {/* Progress (nur wenn tippbare Spiele vorhanden) */}
+      {total > 0 && (
+        <View style={s.progressRow}>
+          <View style={s.progressBar}>
+            <View style={[s.progressFill, { width: `${(tipped / total) * 100}%` }]} />
+          </View>
+          <Text style={s.progressLabel}>
+            {allDone ? '✓ Alle Tipps gesetzt' : `${tipped} / ${total} tippbar`}
+          </Text>
         </View>
-        <Text style={s.progressLabel}>
-          {allDone ? '✓ Alle Tipps gesetzt' : `${tipped} / ${total} getippt`}
-        </Text>
-      </View>
+      )}
 
-      {/* Games */}
+      {/* Testspieltag-Legende */}
+      {matchday.isTest && (
+        <View style={s.legendRow}>
+          <View style={s.legendItem}><View style={[s.legendDot, { backgroundColor: '#6B7280' }]} /><Text style={s.legendText}>Kein Tipp</Text></View>
+          <View style={s.legendItem}><View style={[s.legendDot, { backgroundColor: C.wrong }]} /><Text style={s.legendText}>Falsch</Text></View>
+          <View style={s.legendItem}><View style={[s.legendDot, { backgroundColor: C.correct }]} /><Text style={s.legendText}>Richtig</Text></View>
+        </View>
+      )}
+
+      {/* Spielliste */}
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
         {matchday.games.map((game) => {
-          const pick   = dayTips[game.id];
+          const tip    = dayTips[game.id];
           const locked = isGameLocked(game.dateISO, game.time);
+          const state  = getGameState(game, tip, locked);
           const disp   = formatDisplayDate(game.dateISO);
           return (
-            <View key={game.id} style={[s.card, locked && s.cardLocked]}>
-              <View style={s.cardTopRow}>
-                <Text style={s.gameDateTime}>
-                  <Text style={s.gameDate}>{disp}</Text>
-                  {'  ·  '}
-                  <Text style={s.gameTimeVal}>{game.time} Uhr</Text>
-                </Text>
-                {locked && (
-                  <View style={s.lockedBadge}>
-                    <Ionicons name="lock-closed" size={10} color={C.textMuted} />
-                    <Text style={s.lockedText}>Gesperrt</Text>
-                  </View>
-                )}
-              </View>
-              <View style={s.teamsRow}>
-                <TeamButton
-                  label={game.teamA}
-                  odds={game.oddsA}
-                  selected={pick === 'A'}
-                  dimmed={pick === 'B'}
-                  locked={locked}
-                  onPress={() => handleTip(game.id, 'A', locked)}
-                />
-                <Text style={s.vs}>vs</Text>
-                <TeamButton
-                  label={game.teamB}
-                  odds={game.oddsB}
-                  selected={pick === 'B'}
-                  dimmed={pick === 'A'}
-                  locked={locked}
-                  onPress={() => handleTip(game.id, 'B', locked)}
-                />
-              </View>
-            </View>
+            <GameCard
+              key={game.id}
+              game={game}
+              tip={tip}
+              state={state}
+              displayDate={disp}
+              onPress={(team) => handleTip(game.id, team, locked, !!game.result)}
+            />
           );
         })}
         <View style={{ height: 24 }} />
@@ -174,7 +190,7 @@ export default function SpieltagScreen() {
             <Text style={s.modalEmoji}>🎉</Text>
             <Text style={s.modalTitle}>Alle Tipps abgegeben!</Text>
             <Text style={s.modalSub}>
-              Du hast alle {total} Tipps für {matchday.label} gesetzt.{'\n'}
+              Du hast alle Tipps für {matchday.label} gesetzt.{'\n'}
               Punkte werden nach Spielende gutgeschrieben.
             </Text>
             {dayIndex < MATCHDAYS.length - 1 && (
@@ -193,46 +209,172 @@ export default function SpieltagScreen() {
   );
 }
 
-function TeamButton({ label, odds, selected, dimmed, locked, onPress }) {
-  const style = [
-    s.teamBtn,
-    selected && !locked && s.teamBtnSelected,
-    dimmed   && s.teamBtnDimmed,
-    locked   && s.teamBtnLocked,
+// ─── GameCard ─────────────────────────────────────────────────────────────────
+function GameCard({ game, tip, state, displayDate, onPress }) {
+  const isLocked  = state === 'locked' || state === 'locked_no_tip' || state === 'locked_saved';
+  const hasResult = state === 'correct' || state === 'wrong';
+
+  const cardStyle = [
+    s.card,
+    state === 'correct'      && s.cardCorrect,
+    state === 'wrong'        && s.cardWrong,
+    (state === 'locked' || state === 'locked_no_tip' || state === 'locked_saved') && s.cardLocked,
   ];
+
   return (
-    <TouchableOpacity style={style} onPress={onPress} activeOpacity={locked ? 1 : 0.7}>
-      {selected && !locked && (
-        <Ionicons name="checkmark-circle" size={13} color={C.green700} style={s.checkIcon} />
-      )}
-      <Text style={[
-        s.teamName,
-        selected && !locked && s.teamNameSelected,
-        (dimmed || locked) && s.teamNameDimmed,
-      ]}>
-        {label}
-      </Text>
-      <View style={[s.oddsBadge, selected && !locked && s.oddsBadgeSelected]}>
-        <Text style={[s.oddsText, selected && !locked && s.oddsTextSelected]}>
-          {odds.toFixed(1)}
+    <View style={cardStyle}>
+      {/* Obere Zeile: Datum | Score | Uhrzeit */}
+      <View style={s.cardTop}>
+        <Text style={[s.topDate, isLocked && s.topDateLocked]}>
+          {displayDate}
         </Text>
+        <ScoreBadge game={game} state={state} />
+        <View style={s.topRight}>
+          <Text style={[s.topTime, isLocked && s.topTimeLocked]}>{game.time} Uhr</Text>
+          {isLocked && !hasResult && (
+            <View style={s.lockRow}>
+              <Ionicons name="lock-closed" size={10} color={C.lockedText} />
+              <Text style={s.lockText}>Gesperrt</Text>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* Team-Buttons */}
+      <View style={s.teamsRow}>
+        <TeamButton side="A" game={game} tip={tip} state={state} onPress={() => onPress('A')} />
+        <TeamButton side="B" game={game} tip={tip} state={state} onPress={() => onPress('B')} />
+      </View>
+
+      {/* Ergebnis-Badge */}
+      {hasResult && (
+        <ResultBadge state={state} tip={tip} game={game} />
+      )}
+    </View>
+  );
+}
+
+// ─── ScoreBadge ───────────────────────────────────────────────────────────────
+function ScoreBadge({ game, state }) {
+  const hasScore = game.score != null;
+  const isCorrect = state === 'correct';
+  const isWrong   = state === 'wrong';
+
+  return (
+    <View style={[
+      s.scoreBadge,
+      isCorrect && s.scoreBadgeCorrect,
+      isWrong   && s.scoreBadgeWrong,
+    ]}>
+      {hasScore ? (
+        <Text style={[
+          s.scoreText,
+          isCorrect && s.scoreTextCorrect,
+          isWrong   && s.scoreTextWrong,
+        ]}>
+          {game.score.home} : {game.score.away}
+        </Text>
+      ) : (
+        <Text style={s.scorePlaceholder}>– : –</Text>
+      )}
+    </View>
+  );
+}
+
+// ─── TeamButton ───────────────────────────────────────────────────────────────
+function TeamButton({ side, game, tip, state, onPress }) {
+  const isMyPick   = tip === side;
+  const isWinner   = game.result === side;
+  const hasResult  = state === 'correct' || state === 'wrong';
+  const isLocked   = state !== 'empty' && state !== 'saved';
+
+  let btnStyle  = [s.teamBtn];
+  let nameStyle = [s.teamName];
+  let oddsStyle = [s.oddsText];
+  let icon      = null;
+
+  if (hasResult) {
+    if (isMyPick && state === 'correct') {
+      btnStyle  = [s.teamBtn, s.teamBtnCorrect];
+      nameStyle = [s.teamName, s.teamNameCorrect];
+      oddsStyle = [s.oddsText, s.oddsCorrect];
+      icon      = <Ionicons name="checkmark-circle" size={13} color={C.correct} style={s.btnIcon} />;
+    } else if (isMyPick && state === 'wrong') {
+      btnStyle  = [s.teamBtn, s.teamBtnWrong];
+      nameStyle = [s.teamName, s.teamNameWrong];
+      oddsStyle = [s.oddsText, s.oddsWrong];
+      icon      = <Ionicons name="close-circle" size={13} color={C.wrong} style={s.btnIcon} />;
+    } else if (!isMyPick && isWinner) {
+      // Zeige den tatsächlichen Gewinner wenn Tipp falsch war
+      btnStyle  = [s.teamBtn, s.teamBtnWinner];
+      nameStyle = [s.teamName, s.teamNameCorrect];
+    } else {
+      btnStyle  = [s.teamBtn, s.teamBtnDimmed];
+      nameStyle = [s.teamName, s.teamNameDimmed];
+    }
+  } else if (state === 'saved' || state === 'locked_saved') {
+    if (isMyPick) {
+      btnStyle  = [s.teamBtn, s.teamBtnSaved];
+      nameStyle = [s.teamName, s.teamNameSaved];
+      oddsStyle = [s.oddsText, s.oddsSaved];
+      icon      = <Ionicons name="bookmark" size={12} color={C.saved} style={s.btnIcon} />;
+    } else {
+      btnStyle  = [s.teamBtn, s.teamBtnDimmed];
+      nameStyle = [s.teamName, s.teamNameDimmed];
+    }
+  } else if (state === 'locked' || state === 'locked_no_tip') {
+    btnStyle  = [s.teamBtn, s.teamBtnLockedEmpty];
+    nameStyle = [s.teamName, s.teamNameDimmed];
+  }
+
+  return (
+    <TouchableOpacity
+      style={btnStyle}
+      onPress={onPress}
+      activeOpacity={isLocked || hasResult ? 1 : 0.7}
+    >
+      {icon}
+      <Text style={nameStyle}>{side === 'A' ? game.teamA : game.teamB}</Text>
+      <View style={s.oddsBadge}>
+        <Text style={oddsStyle}>{(side === 'A' ? game.oddsA : game.oddsB).toFixed(1)}</Text>
       </View>
     </TouchableOpacity>
   );
 }
 
+// ─── ResultBadge ──────────────────────────────────────────────────────────────
+function ResultBadge({ state, tip, game }) {
+  const correct = state === 'correct';
+  return (
+    <View style={[s.resultBadge, correct ? s.resultBadgeCorrect : s.resultBadgeWrong]}>
+      <Ionicons
+        name={correct ? 'checkmark-circle' : 'close-circle'}
+        size={14}
+        color={correct ? C.correct : C.wrong}
+      />
+      <Text style={[s.resultText, correct ? s.resultTextCorrect : s.resultTextWrong]}>
+        {correct
+          ? `Richtig! +${(tip === 'A' ? game.oddsA : game.oddsB).toFixed(1)} Punkte`
+          : `Falsch — ${game.result === 'A' ? game.teamA : game.teamB} hat gewonnen`
+        }
+      </Text>
+    </View>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  container:          { flex: 1, backgroundColor: C.bg },
+  container:     { flex: 1, backgroundColor: C.bg },
 
   toast: {
     position: 'absolute', top: 14, alignSelf: 'center', zIndex: 99,
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: C.green200,
+    backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#93C5FD',
     paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1, shadowRadius: 6, elevation: 4,
   },
-  toastText:          { color: C.green700, fontSize: 13, fontWeight: '600' },
+  toastText:     { color: C.saved, fontSize: 13, fontWeight: '600' },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -243,77 +385,122 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center', justifyContent: 'center',
   },
-  navBtnDisabled:     { opacity: 0.35 },
-  headerCenter:       { alignItems: 'center' },
-  dayLabel:           { color: C.onPitch, fontSize: 18, fontWeight: '800' },
-  dayDate:            { color: C.onPitchSec, fontSize: 12, marginTop: 2 },
+  navBtnDisabled:  { opacity: 0.3 },
+  headerCenter:    { alignItems: 'center' },
+  dayLabel:        { color: C.onPitch, fontSize: 18, fontWeight: '800' },
+  dayDate:         { color: C.onPitchSec, fontSize: 12, marginTop: 2 },
 
-  progressRow: {
-    paddingHorizontal: 16, paddingBottom: 14, gap: 6,
+  progressRow:     { paddingHorizontal: 16, paddingBottom: 14, gap: 6 },
+  progressBar:     { height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2 },
+  progressFill:    { height: '100%', backgroundColor: C.accent, borderRadius: 2 },
+  progressLabel:   { color: C.onPitchSec, fontSize: 12 },
+
+  legendRow: {
+    flexDirection: 'row', gap: 16, paddingHorizontal: 16,
+    paddingBottom: 10, justifyContent: 'center',
   },
-  progressBar:        { height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2 },
-  progressFill:       { height: '100%', backgroundColor: C.accent, borderRadius: 2 },
-  progressLabel:      { color: C.onPitchSec, fontSize: 12 },
+  legendItem:      { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot:       { width: 8, height: 8, borderRadius: 4 },
+  legendText:      { color: C.onPitchSec, fontSize: 11 },
 
-  scroll:             { paddingHorizontal: 14, paddingTop: 4, gap: 10 },
+  scroll:          { paddingHorizontal: 14, paddingTop: 4, gap: 10 },
 
+  // ── Card states ──
   card: {
     backgroundColor: C.card, borderRadius: 14, padding: 14,
+    borderWidth: 1.5, borderColor: C.border,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, shadowRadius: 6, elevation: 3,
+    shadowOpacity: 0.08, shadowRadius: 6, elevation: 3,
   },
-  cardLocked:         { backgroundColor: C.lockedBg },
-  cardTopRow:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  gameDateTime:       { fontSize: 12 },
-  gameDate:           { color: C.text, fontWeight: '700' },
-  gameTimeVal:        { color: C.textSec, fontWeight: '600' },
-  lockedBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#F3F4F6', borderRadius: 5,
-    paddingVertical: 2, paddingHorizontal: 6,
+  cardCorrect:     { backgroundColor: '#F0FDF4', borderColor: C.correctBorder },
+  cardWrong:       { backgroundColor: '#FFF5F5', borderColor: C.wrongBorder },
+  cardLocked:      { backgroundColor: '#EDF2EE', borderColor: C.lockedBorder, opacity: 0.85 },
+
+  // ── Card top row ──
+  cardTop:         { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  topDate:         { color: C.text, fontWeight: '700', fontSize: 12, flex: 1 },
+  topDateLocked:   { color: C.lockedText },
+  topRight:        { flex: 1, alignItems: 'flex-end', gap: 2 },
+  topTime:         { color: C.textSec, fontWeight: '600', fontSize: 12 },
+  topTimeLocked:   { color: C.lockedText },
+  lockRow:         { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  lockText:        { color: C.lockedText, fontSize: 10, fontWeight: '600' },
+
+  // ── Score badge ──
+  scoreBadge: {
+    backgroundColor: '#E2E8E4', borderRadius: 8,
+    paddingVertical: 4, paddingHorizontal: 12, minWidth: 64, alignItems: 'center',
   },
-  lockedText:         { color: C.textMuted, fontSize: 10, fontWeight: '600' },
+  scoreBadgeCorrect: { backgroundColor: C.correctBg },
+  scoreBadgeWrong:   { backgroundColor: C.wrongBg },
+  scoreText:         { color: C.text, fontSize: 15, fontWeight: '800' },
+  scoreTextCorrect:  { color: C.correct },
+  scoreTextWrong:    { color: C.wrong },
+  scorePlaceholder:  { color: C.lockedText, fontSize: 14, fontWeight: '700' },
 
-  teamsRow:           { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  vs:                 { color: C.textMuted, fontSize: 11, fontWeight: '700', width: 22, textAlign: 'center' },
+  // ── Teams row ──
+  teamsRow:          { flexDirection: 'row', gap: 8 },
 
+  // ── Team button base ──
   teamBtn: {
     flex: 1, borderRadius: 10, borderWidth: 1.5, borderColor: C.border,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#E8F5EC',
     paddingVertical: 12, paddingHorizontal: 8,
     alignItems: 'center', gap: 5, minHeight: 66, justifyContent: 'center',
   },
-  teamBtnSelected:    { borderColor: C.selectedBorder, backgroundColor: C.selectedBg },
-  teamBtnDimmed:      { opacity: 0.4 },
-  teamBtnLocked:      { borderColor: C.lockedBorder, backgroundColor: C.lockedBg },
-  checkIcon:          { position: 'absolute', top: 5, right: 5 },
-  teamName:           { color: C.text, fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  teamNameSelected:   { color: C.green700 },
-  teamNameDimmed:     { color: C.textMuted },
-  oddsBadge:          { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 5, backgroundColor: '#F3F4F6' },
-  oddsBadgeSelected:  { backgroundColor: C.green200 },
-  oddsText:           { color: C.textMuted, fontSize: 11, fontWeight: '700' },
-  oddsTextSelected:   { color: C.green700 },
+  teamBtnSaved:        { borderColor: C.savedBorder,   backgroundColor: C.savedBg },
+  teamBtnCorrect:      { borderColor: C.correctBorder,  backgroundColor: C.correctBg },
+  teamBtnWrong:        { borderColor: C.wrongBorder,    backgroundColor: C.wrongBg },
+  teamBtnWinner:       { borderColor: C.correctBorder,  backgroundColor: C.winnerBg },
+  teamBtnDimmed:       { opacity: 0.4 },
+  teamBtnLockedEmpty:  { borderColor: C.lockedBorder, backgroundColor: '#E2E8E4' },
 
+  btnIcon:             { position: 'absolute', top: 5, right: 5 },
+
+  teamName:            { color: C.text,    fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  teamNameSaved:       { color: C.saved },
+  teamNameCorrect:     { color: C.correct },
+  teamNameWrong:       { color: C.wrong },
+  teamNameDimmed:      { color: C.lockedText },
+
+  oddsBadge:           { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 5, backgroundColor: 'rgba(0,0,0,0.05)' },
+  oddsText:            { color: C.textMuted, fontSize: 11, fontWeight: '700' },
+  oddsSaved:           { color: C.saved },
+  oddsCorrect:         { color: C.correct },
+  oddsWrong:           { color: C.wrong },
+
+  // ── Result badge ──
+  resultBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 10, paddingVertical: 6, paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  resultBadgeCorrect:  { backgroundColor: C.correctBg },
+  resultBadgeWrong:    { backgroundColor: C.wrongBg },
+  resultText:          { fontSize: 12, fontWeight: '600' },
+  resultTextCorrect:   { color: C.correct },
+  resultTextWrong:     { color: C.wrong },
+
+  // ── Modal ──
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center', justifyContent: 'center', padding: 32,
   },
   modalCard: {
-    backgroundColor: C.surface, borderRadius: 20, padding: 28,
+    backgroundColor: C.card, borderRadius: 20, padding: 28,
     width: '100%', alignItems: 'center', gap: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2, shadowRadius: 20, elevation: 10,
   },
-  modalEmoji:         { fontSize: 48 },
-  modalTitle:         { color: C.green900, fontSize: 22, fontWeight: '800', textAlign: 'center' },
-  modalSub:           { color: C.textSec, fontSize: 14, textAlign: 'center', lineHeight: 21 },
+  modalEmoji:      { fontSize: 48 },
+  modalTitle:      { color: C.green900, fontSize: 22, fontWeight: '800', textAlign: 'center' },
+  modalSub:        { color: C.textSec, fontSize: 14, textAlign: 'center', lineHeight: 21 },
   modalBtn: {
     marginTop: 8, backgroundColor: C.green700, borderRadius: 12,
     paddingVertical: 14, paddingHorizontal: 24, width: '100%',
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
-  modalBtnText:       { color: '#fff', fontSize: 15, fontWeight: '700' },
-  modalBtnGhost:      { paddingVertical: 10 },
-  modalBtnGhostText:  { color: C.textMuted, fontSize: 14 },
+  modalBtnText:    { color: '#fff', fontSize: 15, fontWeight: '700' },
+  modalBtnGhost:   { paddingVertical: 10 },
+  modalBtnGhostText: { color: C.textMuted, fontSize: 14 },
 });

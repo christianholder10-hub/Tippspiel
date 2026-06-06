@@ -17,7 +17,48 @@ export function formatDisplayDate(dateISO) {
   return `${parseInt(d)}. ${months[parseInt(m) - 1]}`;
 }
 
-export const MATCHDAYS = [
+// Testspieltag — zeigt alle 3 Tipp-Zustände:
+// Spiel 1: kein Tipp (gesperrt), Spiel 2: falsch getippt, Spiel 3: richtig getippt
+export const TEST_MATCHDAY = {
+  id: 0,
+  label: 'Testspieltag',
+  dateRange: '1. Jun 2026',
+  isTest: true,
+  games: [
+    {
+      id: 1,
+      teamA: 'Deutschland', teamB: 'Frankreich',
+      oddsA: 2.5, oddsB: 1.8,
+      dateISO: '2026-06-01', time: '18:00',
+      score: { home: 1, away: 2 },
+      result: 'B', // Frankreich hat gewonnen
+    },
+    {
+      id: 2,
+      teamA: 'Spanien', teamB: 'England',
+      oddsA: 2.0, oddsB: 2.0,
+      dateISO: '2026-06-01', time: '21:00',
+      score: { home: 0, away: 2 },
+      result: 'B', // England hat gewonnen
+    },
+    {
+      id: 3,
+      teamA: 'Brasilien', teamB: 'Argentinien',
+      oddsA: 1.9, oddsB: 2.1,
+      dateISO: '2026-06-01', time: '23:00',
+      score: { home: 3, away: 1 },
+      result: 'A', // Brasilien hat gewonnen
+    },
+  ],
+};
+
+// Demo-Tipps für den Testspieltag (im Context vorinitialisiert)
+// Spiel 1: kein Tipp → dayIndex 0, kein Eintrag
+// Spiel 2: falsch (Spanien/A getippt, England/B hat gewonnen)
+// Spiel 3: richtig (Brasilien/A getippt, Brasilien/A hat gewonnen)
+export const DEMO_TIPS = { 0: { 2: 'A', 3: 'A' } };
+
+export const MATCHDAYS = [TEST_MATCHDAY,
   {
     id: 1,
     label: 'Gruppenspieltag 1',
