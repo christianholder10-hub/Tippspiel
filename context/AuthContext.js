@@ -23,8 +23,26 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signIn = async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return error;
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return error;
+
+    // Profil anlegen falls es noch nicht existiert
+    // (Nutzer die sich vor Erstellung der Tabelle registriert haben)
+    if (data.user) {
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', data.user.id)
+        .single();
+
+      if (!existing) {
+        const fallback = email.split('@')[0];
+        await supabase
+          .from('profiles')
+          .upsert({ id: data.user.id, username: fallback }, { onConflict: 'id' });
+      }
+    }
+    return null;
   };
 
   const signUp = async (email, password, username) => {
