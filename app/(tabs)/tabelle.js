@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { PLAYERS } from '../data/players';
+import { PLAYERS } from '../../data/players';
 
 const C = {
   bg: '#1B5E2E', card: '#F0FDF4',

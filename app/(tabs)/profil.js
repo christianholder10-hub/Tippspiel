@@ -1,8 +1,9 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useTips } from '../context/TipsContext';
-import { MATCHDAYS } from '../data/matchdays';
+import { useTips } from '../../context/TipsContext';
+import { useAuth } from '../../context/AuthContext';
+import { MATCHDAYS } from '../../data/matchdays';
 
 const C = {
   bg: '#1B5E2E', card: '#F0FDF4',
@@ -14,11 +15,12 @@ const C = {
   pending: '#92400E', pendingBg: '#FEF3C7',
 };
 
-const ME_NAME = 'Du';
 
 export default function ProfilScreen() {
-  const router      = useRouter();
-  const { tips }    = useTips();
+  const router         = useRouter();
+  const { tips }       = useTips();
+  const { user, signOut } = useAuth();
+  const displayName = user?.email?.split('@')[0] ?? 'Du';
 
   // Echte Metriken aus den gespeicherten Tipps
   const totalTipped = Object.values(tips).reduce(
@@ -49,9 +51,9 @@ export default function ProfilScreen() {
         {/* Avatar */}
         <View style={s.avatarRow}>
           <View style={s.avatar}>
-            <Text style={s.avatarInitial}>{ME_NAME.charAt(0)}</Text>
+            <Text style={s.avatarInitial}>{displayName.charAt(0).toUpperCase()}</Text>
           </View>
-          <Text style={s.name}>{ME_NAME}</Text>
+          <Text style={s.name}>{displayName}</Text>
           <Text style={s.sub}>WM 2026 · Tippspiel</Text>
         </View>
 
@@ -112,6 +114,11 @@ export default function ProfilScreen() {
             <Text style={s.emptyText}>Noch keine Tipps abgegeben.{'\n'}Geh zum Spieltag-Tab und leg los!</Text>
           </View>
         )}
+
+        <TouchableOpacity style={s.signOutBtn} onPress={signOut}>
+          <Ionicons name="log-out-outline" size={18} color={C.textMuted} />
+          <Text style={s.signOutText}>Abmelden</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -170,4 +177,6 @@ const s = StyleSheet.create({
 
   emptyBox:       { alignItems: 'center', gap: 10, paddingVertical: 32 },
   emptyText:      { color: C.onPitchSec, fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  signOutBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, marginTop: 8 },
+  signOutText:    { color: C.textMuted, fontSize: 14 },
 });

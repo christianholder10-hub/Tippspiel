@@ -1,50 +1,50 @@
-import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Ionicons } from '@expo/vector-icons';
+import { View, ActivityIndicator } from 'react-native';
+import { AuthProvider, useAuth } from '../context/AuthContext';
 import { TipsProvider } from '../context/TipsContext';
 
-const TABS = [
-  { name: 'index',       label: 'Spieltag',    icon: 'football-outline' },
-  { name: 'tabelle',     label: 'Tabelle',      icon: 'trophy-outline' },
-  { name: 'turnierbaum', label: 'Turnierbaum',  icon: 'git-branch-outline' },
-  { name: 'profil',      label: 'Profil',       icon: 'person-outline' },
-];
+function AuthGuard() {
+  const { user, loading } = useAuth();
+  const router   = useRouter();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (loading) return;
+
+    const inTabs  = segments[0] === '(tabs)';
+    const inLogin = segments[0] === 'login';
+
+    if (!user && !inLogin) {
+      router.replace('/login');
+    } else if (user && inLogin) {
+      router.replace('/(tabs)/');
+    }
+  }, [user, loading, segments]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#1B5E2E', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color="#4ADE80" size="large" />
+      </View>
+    );
+  }
+
+  return null;
+}
 
 export default function RootLayout() {
   return (
-    <TipsProvider>
-      <StatusBar style="light" />
-      <Tabs
-        screenOptions={{
-          headerStyle: { backgroundColor: '#0F3D1A', shadowColor: 'transparent', elevation: 0 },
-          headerTintColor: '#F0FDF4',
-          headerTitleStyle: { fontWeight: '700', fontSize: 18 },
-          tabBarStyle: {
-            backgroundColor: '#0F3D1A',
-            borderTopColor: '#1A5C2A',
-            borderTopWidth: 1,
-            height: 82,
-            paddingBottom: 18,
-            paddingTop: 8,
-          },
-          tabBarActiveTintColor: '#4ADE80',
-          tabBarInactiveTintColor: '#4D8060',
-          tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 0 },
-        }}
-      >
-        {TABS.map(({ name, label, icon }) => (
-          <Tabs.Screen
-            key={name}
-            name={name}
-            options={{
-              title: label,
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name={icon} size={22} color={color} />
-              ),
-            }}
-          />
-        ))}
-      </Tabs>
-    </TipsProvider>
+    <AuthProvider>
+      <TipsProvider>
+        <StatusBar style="light" />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="login" />
+          <Stack.Screen name="(tabs)" />
+        </Stack>
+        <AuthGuard />
+      </TipsProvider>
+    </AuthProvider>
   );
 }
