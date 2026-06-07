@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTips } from '../../context/TipsContext';
 import { useAuth } from '../../context/AuthContext';
 import { MATCHDAYS } from '../../data/matchdays';
+import { supabase } from '../../lib/supabase';
 
 const C = {
   bg: '#1B5E2E', card: '#F0FDF4',
@@ -17,10 +19,25 @@ const C = {
 
 
 export default function ProfilScreen() {
-  const router         = useRouter();
-  const { tips }       = useTips();
-  const { user, signOut } = useAuth();
-  const displayName = user?.email?.split('@')[0] ?? 'Du';
+  const router             = useRouter();
+  const { tips }           = useTips();
+  const { user, signOut }  = useAuth();
+  const [username, setUsername] = useState('');
+
+  // Echten Benutzernamen aus der profiles-Tabelle laden
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.username) setUsername(data.username);
+      });
+  }, [user?.id]);
+
+  const displayName = username || user?.email?.split('@')[0] || 'Du';
 
   // Echte Metriken aus den gespeicherten Tipps
   const totalTipped = Object.values(tips).reduce(
