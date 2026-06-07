@@ -56,21 +56,29 @@ export default function LoginScreen() {
         );
       }
     } else {
-      const err = await signUp(email.trim(), password, username.trim());
+      const { error: err, needsConfirmation } = await signUp(
+        email.trim(), password, username.trim()
+      );
       setLoading(false);
       if (err) {
+        // Show the raw Supabase message so nothing is silently swallowed,
+        // plus friendly overrides for the most common cases.
+        const msg = err.message ?? '';
         setError(
-          err.message.includes('already registered')
+          msg.includes('already registered') || msg.includes('already been registered')
             ? 'Diese E-Mail-Adresse ist bereits registriert.'
-            : err.message.includes('rate limit') || err.message.includes('wait')
-            ? 'Zu viele Anfragen – bitte kurz warten und erneut versuchen.'
-            : err.message
+            : msg.includes('rate limit') || msg.includes('security purposes')
+            ? 'Zu viele Anfragen – bitte 60 Sekunden warten und erneut versuchen.'
+            : msg.includes('invalid') && msg.toLowerCase().includes('email')
+            ? 'Bitte eine gültige E-Mail-Adresse eingeben.'
+            : msg || 'Registrierung fehlgeschlagen. Bitte erneut versuchen.'
         );
-      } else {
-        // Supabase sends a confirmation email — show the confirm screen
+      } else if (needsConfirmation) {
+        // Email confirmation required → show confirmation screen
         setSentTo(email.trim());
         setMode('confirm');
       }
+      // else: email confirmation is off → AuthGuard redirects automatically
     }
   };
 

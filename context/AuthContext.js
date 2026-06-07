@@ -29,11 +29,18 @@ export function AuthProvider({ children }) {
 
   const signUp = async (email, password, username) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
-    if (!error && data.user) {
-      // Create profile row linked to auth user
-      await supabase.from('profiles').insert({ id: data.user.id, username });
+    if (error) return { error };
+
+    if (data.user) {
+      // upsert so repeated calls (e.g. after re-confirming) don't fail
+      await supabase
+        .from('profiles')
+        .upsert({ id: data.user.id, username }, { onConflict: 'id' });
     }
-    return error;
+
+    // session is null when email confirmation is required,
+    // session is set when confirmation is disabled (dev mode)
+    return { error: null, needsConfirmation: !data.session };
   };
 
   const signOut = async () => {
