@@ -27,12 +27,13 @@ const C = {
 export default function LoginScreen() {
   const { signIn, signUp } = useAuth();
 
-  const [mode, setMode]         = useState('login'); // 'login' | 'register'
-  const [email, setEmail]       = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
+  const [mode, setMode]           = useState('login'); // 'login' | 'register' | 'confirm'
+  const [email, setEmail]         = useState('');
+  const [username, setUsername]   = useState('');
+  const [password, setPassword]   = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState('');
+  const [sentTo, setSentTo]       = useState('');
 
   const handleSubmit = async () => {
     setError('');
@@ -41,13 +42,65 @@ export default function LoginScreen() {
     if (password.length < 6) { setError('Passwort muss mindestens 6 Zeichen lang sein.'); return; }
 
     setLoading(true);
-    const err = mode === 'login'
-      ? await signIn(email.trim(), password)
-      : await signUp(email.trim(), password, username.trim());
-    setLoading(false);
 
-    if (err) setError(err.message);
+    if (mode === 'login') {
+      const err = await signIn(email.trim(), password);
+      setLoading(false);
+      if (err) {
+        setError(
+          err.message.includes('Invalid login')
+            ? 'E-Mail oder Passwort falsch.'
+            : err.message.includes('Email not confirmed')
+            ? 'Bitte bestätige zuerst deine E-Mail-Adresse.'
+            : err.message
+        );
+      }
+    } else {
+      const err = await signUp(email.trim(), password, username.trim());
+      setLoading(false);
+      if (err) {
+        setError(
+          err.message.includes('already registered')
+            ? 'Diese E-Mail-Adresse ist bereits registriert.'
+            : err.message.includes('rate limit') || err.message.includes('wait')
+            ? 'Zu viele Anfragen – bitte kurz warten und erneut versuchen.'
+            : err.message
+        );
+      } else {
+        // Supabase sends a confirmation email — show the confirm screen
+        setSentTo(email.trim());
+        setMode('confirm');
+      }
+    }
   };
+
+  // ── Email-Bestätigung abwarten ────────────────────────────────────────────
+  if (mode === 'confirm') {
+    return (
+      <View style={s.container}>
+        <View style={s.confirmWrap}>
+          <View style={s.confirmIconCircle}>
+            <Ionicons name="mail" size={40} color={C.green700} />
+          </View>
+          <Text style={s.confirmTitle}>Bestätigungs-E-Mail gesendet</Text>
+          <Text style={s.confirmBody}>
+            Wir haben eine E-Mail an{'\n'}
+            <Text style={s.confirmEmail}>{sentTo}</Text>
+            {'\n\n'}geschickt. Klicke auf den Bestätigungslink darin, um dein Konto zu aktivieren. Danach kannst du dich hier anmelden.
+          </Text>
+          <TouchableOpacity
+            style={s.confirmBtn}
+            onPress={() => { setMode('login'); setPassword(''); setError(''); }}
+          >
+            <Text style={s.confirmBtnText}>Zur Anmeldung</Text>
+          </TouchableOpacity>
+          <Text style={s.confirmHint}>
+            Keine E-Mail erhalten? Prüfe deinen Spam-Ordner.
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -191,4 +244,26 @@ const s = StyleSheet.create({
 
   switchBtn:      { alignItems: 'center', paddingVertical: 4 },
   switchText:     { color: C.green700, fontSize: 13, fontWeight: '600' },
+
+  // ── Confirm screen ──
+  confirmWrap: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    padding: 32, gap: 16,
+  },
+  confirmIconCircle: {
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: C.card, alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15, shadowRadius: 10, elevation: 6,
+    marginBottom: 8,
+  },
+  confirmTitle:   { color: C.onPitch, fontSize: 22, fontWeight: '800', textAlign: 'center' },
+  confirmBody:    { color: C.onPitchSec, fontSize: 15, textAlign: 'center', lineHeight: 24 },
+  confirmEmail:   { color: C.onPitch, fontWeight: '700' },
+  confirmBtn: {
+    backgroundColor: C.green700, borderRadius: 12, marginTop: 8,
+    paddingVertical: 14, paddingHorizontal: 40,
+  },
+  confirmBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  confirmHint:    { color: '#4D8060', fontSize: 12, textAlign: 'center' },
 });
